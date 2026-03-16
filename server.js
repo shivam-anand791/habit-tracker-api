@@ -14,10 +14,10 @@ const allowedOrigins = [
   "http://localhost:5500",
   "http://127.0.0.1:5500",
   "https://goal-tracker-frontendapp.vercel.app"
-];
+].map(o => o.toLowerCase().replace(/\/$/, ""));
 
 if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+  allowedOrigins.push(process.env.FRONTEND_URL.toLowerCase().replace(/\/$/, ""));
 }
 
 // Global CORS configuration
@@ -26,17 +26,18 @@ app.use(cors({
     // Allow non-browser requests
     if (!origin) return callback(null, true);
     
-    // Check if origin is allowed
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = origin.toLowerCase().replace(/\/$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS Rejected: ${origin}`);
-      callback(null, false); // Don't throw error, just reject
+      console.warn(`CORS Rejected: [${origin}] - Not in [${allowedOrigins.join(", ")}]`);
+      callback(null, false);
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200 // For legacy browser compatibility
+  optionsSuccessStatus: 200
 }));
+
 
 
 

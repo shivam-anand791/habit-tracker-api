@@ -105,17 +105,12 @@ router.post("/forgot-password", async (req, res) => {
     user.resetTokenExpiry = expiry;
     await user.save();
 
-    // Build reset link with normalized FRONTEND_URL
-    const baseFrontUrl = (process.env.FRONTEND_URL || "http://127.0.0.1:5500").replace(/\/$/, "");
-    const resetLink = `${baseFrontUrl}/auth.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
-    
-    console.log(`[Forgot Password] Attempting to send email to: ${email}`);
+    console.log(`[Forgot Password] Reset link built, preparing email for: ${email}`);
     const transporter = getTransporter();
     
-    // Quick verify before sending
-    await transporter.verify();
-    
+    console.log(`[Forgot Password] Attempting to sendMail...`);
     await transporter.sendMail({
+
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Reset your FocusBoard password",
