@@ -9,16 +9,19 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// -------- EMAIL TRANSPORTER (lazy — reads env at request time) --------
+// -------- EMAIL TRANSPORTER --------
 function getTransporter() {
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use SSL
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
     }
   });
 }
+
 
 // -------- REGISTER --------
 router.post("/register",
@@ -105,17 +108,12 @@ router.post("/forgot-password", async (req, res) => {
     user.resetTokenExpiry = expiry;
     await user.save();
 
-    // Build reset link with normalized FRONTEND_URL
-    const baseFrontUrl = (process.env.FRONTEND_URL || "http://127.0.0.1:5500").replace(/\/$/, "");
-    const resetLink = `${baseFrontUrl}/auth.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
     console.log(`[Forgot Password] Reset link built for: ${email}`);
-
     const transporter = getTransporter();
     
-    console.log(`[Forgot Password] Attempting to sendMail...`);
-    await transporter.sendMail({
-
+    // Send email in the BACKGROUND (don't await) 
+    // This stops the frontend from timing out if Gmail is slow
+    transporter.sendMail({
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Reset your FocusBoard password",
@@ -130,10 +128,13 @@ router.post("/forgot-password", async (req, res) => {
           <p style="margin-top:24px;font-size:12px;color:#6b7280;">If you didn't request this, you can safely ignore this email.</p>
         </div>
       `
-    });
+    })
+    .then(() => console.log(`[Forgot Password] Background Success: Email sent to ${email}`))
+    .catch(err => console.error(`[Forgot Password] Background Failure:`, err.message || err));
 
-    console.log(`[Forgot Password] Email sent successfully to: ${email}`);
+    // Respond immediately to the frontend
     res.json({ message: "If that email is registered, a reset link has been sent." });
+
   } catch (err) {
     console.error("[Forgot Password] Critical Error:", err.message || err);
     // Returning more detail to help the user fix their Render env vars
