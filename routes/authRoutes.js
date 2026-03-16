@@ -12,15 +12,14 @@ const router = express.Router();
 // -------- EMAIL TRANSPORTER --------
 function getTransporter() {
   return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
     }
   });
 }
+
 
 
 // -------- REGISTER --------
@@ -114,11 +113,10 @@ router.post("/forgot-password", async (req, res) => {
 
     console.log(`[Forgot Password] Reset link built for: ${email}`);
 
+    console.log(`[Forgot Password] Attempting to send email to: ${email}`);
     const transporter = getTransporter();
     
-    // Send email in the BACKGROUND (don't await) 
-    // This stops the frontend from timing out if Gmail is slow
-    transporter.sendMail({
+    await transporter.sendMail({
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Reset your FocusBoard password",
@@ -133,12 +131,11 @@ router.post("/forgot-password", async (req, res) => {
           <p style="margin-top:24px;font-size:12px;color:#6b7280;">If you didn't request this, you can safely ignore this email.</p>
         </div>
       `
-    })
-    .then(() => console.log(`[Forgot Password] Background Success: Email sent to ${email}`))
-    .catch(err => console.error(`[Forgot Password] Background Failure:`, err.message || err));
+    });
 
-    // Respond immediately to the frontend
+    console.log(`[Forgot Password] Email sent successfully to: ${email}`);
     res.json({ message: "If that email is registered, a reset link has been sent." });
+
 
   } catch (err) {
     console.error("[Forgot Password] Critical Error:", err.message || err);
