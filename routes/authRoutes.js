@@ -20,7 +20,7 @@ function getTransporter() {
       pass: process.env.EMAIL_PASS
     },
     // Force IPv4 because IPv6 failed in logs
-    // And increase timeouts for cloud stability
+    family: 4,
     connectionTimeout: 20000, 
     greetingTimeout: 20000,
     socketTimeout: 30000,
