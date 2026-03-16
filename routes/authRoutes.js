@@ -13,19 +13,22 @@ const router = express.Router();
 function getTransporter() {
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL for port 465
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
     },
-    connectionTimeout: 10000, // 10 seconds to connect
-    greetingTimeout: 10000,   // 10 seconds to wait for greeting
-    socketTimeout: 15000,     // 15 seconds to wait for socket activity
+    // Force IPv4 because IPv6 failed in logs
+    // And increase timeouts for cloud stability
+    connectionTimeout: 20000, 
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
     debug: true,
     logger: true
   });
 }
+
 
 
 
