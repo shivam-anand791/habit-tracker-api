@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
 
 const HabitSchema = new mongoose.Schema({
+  habitId: String,    // client-side stable ID
   name: String,
+  category: { type: String, default: "General" },
   goal: Number,
   checks: [Boolean]
 });
