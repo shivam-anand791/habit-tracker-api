@@ -131,9 +131,13 @@ router.post("/forgot-password", async (req, res) => {
     res.json({ message: "If that email is registered, a reset link has been sent." });
   } catch (err) {
     console.error("[Forgot Password] Critical Error:", err.message || err);
-    res.status(500).json({ error: "Failed to process reset request. Please check email configuration." });
+    // Returning more detail to help the user fix their Render env vars
+    res.status(500).json({ 
+      error: `Email Error: ${err.message || "Unknown error"}. Please check your App Password in Render settings.` 
+    });
   }
 });
+
 
 
 // -------- RESET PASSWORD --------
