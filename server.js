@@ -10,32 +10,34 @@ dotenv.config();
 const app = express();
 
 // Configure CORS for split deployment
-const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : null;
-
 const allowedOrigins = [
   "http://localhost:5500",
   "http://127.0.0.1:5500",
-  frontendUrl
-].filter(Boolean);
+  "https://goal-tracker-frontendapp.vercel.app"
+];
 
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+}
 
-
-// CORS middleware handles preflight automatically
+// Global CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps/curl)
+    // Allow non-browser requests
     if (!origin) return callback(null, true);
     
-    // Exact match check
+    // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS Rejected: Origin [${origin}] not in [${allowedOrigins.join(", ")}]`);
-      callback(new Error("Not allowed by CORS"));
+      console.warn(`CORS Rejected: ${origin}`);
+      callback(null, false); // Don't throw error, just reject
     }
   },
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200 // For legacy browser compatibility
 }));
+
 
 
 
