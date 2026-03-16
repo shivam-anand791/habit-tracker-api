@@ -85,17 +85,18 @@ router.get("/me", authMiddleware, async (req, res) => {
 
 // -------- FORGOT PASSWORD --------
 router.post("/forgot-password", async (req, res) => {
-  try {
-    const { email } = req.body;
+  const { email } = req.body;
+  console.log(`[Forgot Password] Request received for: ${email}`);
 
+  try {
     const user = await User.findOne({ email });
 
-    // Always respond success to prevent email enumeration
     if (!user) {
+      console.log(`[Forgot Password] User not found: ${email}`);
       return res.json({ message: "If that email is registered, a reset link has been sent." });
     }
 
-    // Generate raw token and store its hash
+    console.log(`[Forgot Password] Generating token for: ${email}`);
     const rawToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
     const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
@@ -104,11 +105,16 @@ router.post("/forgot-password", async (req, res) => {
     user.resetTokenExpiry = expiry;
     await user.save();
 
-    // Build reset link
-    const resetLink = `${process.env.FRONTEND_URL || "http://127.0.0.1:5500/frontend"}/auth.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-    // Send email
+    // Build reset link with normalized FRONTEND_URL
+    const baseFrontUrl = (process.env.FRONTEND_URL || "http://127.0.0.1:5500").replace(/\/$/, "");
+    const resetLink = `${baseFrontUrl}/auth.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    
+    console.log(`[Forgot Password] Attempting to send email to: ${email}`);
     const transporter = getTransporter();
+    
+    // Quick verify before sending
+    await transporter.verify();
+    
     await transporter.sendMail({
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -126,13 +132,14 @@ router.post("/forgot-password", async (req, res) => {
       `
     });
 
+    console.log(`[Forgot Password] Email sent successfully to: ${email}`);
     res.json({ message: "If that email is registered, a reset link has been sent." });
   } catch (err) {
-    console.error("forgot-password error:", err.message || err);
-    console.error("Email config — USER:", process.env.EMAIL_USER, "| PASS set:", !!process.env.EMAIL_PASS);
-    res.status(500).json({ error: "Failed to send reset email: " + (err.message || "Unknown error") });
+    console.error("[Forgot Password] Critical Error:", err.message || err);
+    res.status(500).json({ error: "Failed to process reset request. Please check email configuration." });
   }
 });
+
 
 // -------- RESET PASSWORD --------
 router.post("/reset-password", async (req, res) => {
