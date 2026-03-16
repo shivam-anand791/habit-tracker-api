@@ -12,13 +12,19 @@ const router = express.Router();
 // -------- EMAIL TRANSPORTER --------
 function getTransporter() {
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // Use TLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false // Helps in some cloud environments
     }
   });
 }
+
 
 
 
@@ -113,13 +119,12 @@ router.post("/forgot-password", async (req, res) => {
 
     console.log(`[Forgot Password] Reset link built for: ${email}`);
 
-    console.log(`[Forgot Password] Attempting to send email to: ${email}`);
+    console.log(`[Forgot Password] Handing over to background email process for: ${email}`);
     const transporter = getTransporter();
     
-    // Add logging to see exactly where it stops
-    console.log(`[Forgot Password] SMTP Config: Service: Gmail | User: ${process.env.EMAIL_USER}`);
-    
-    await transporter.sendMail({
+    // BACKGROUND SEND (Don't await)
+    // This fixes the hang/timeout issue
+    transporter.sendMail({
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Reset your FocusBoard password",
@@ -134,10 +139,13 @@ router.post("/forgot-password", async (req, res) => {
           <p style="margin-top:24px;font-size:12px;color:#6b7280;">If you didn't request this, you can safely ignore this email.</p>
         </div>
       `
-    });
+    })
+    .then(() => console.log(`[Forgot Password] SUCCESS: Email delivered to ${email}`))
+    .catch(err => console.error(`[Forgot Password] FAILURE: Real error was:`, err.message || err));
 
-    console.log(`[Forgot Password] Email sent successfully to: ${email}`);
+    // Respond instantly
     res.json({ message: "If that email is registered, a reset link has been sent." });
+
 
 
 
