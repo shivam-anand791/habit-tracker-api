@@ -10,11 +10,14 @@ dotenv.config();
 const app = express();
 
 // Configure CORS for split deployment
+const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : null;
+
 const allowedOrigins = [
   "http://localhost:5500",
   "http://127.0.0.1:5500",
-  process.env.FRONTEND_URL
-].filter(Boolean).map(url => url.replace(/\/$/, "")); // Remove trailing slash
+  frontendUrl
+].filter(Boolean);
+
 
 
 app.use(cors({
@@ -22,19 +25,20 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps/curl)
     if (!origin) return callback(null, true);
     
+    // Exact match check
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log("CORS Rejected for origin:", origin);
-      console.log("Expected one of:", allowedOrigins);
+      console.warn(`CORS Rejected: Origin [${origin}] not in [${allowedOrigins.join(", ")}]`);
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true
 }));
 
-// Add this to handle OPTIONS preflight for all routes
-app.options("*", cors());
+// Robust OPTIONS preflight handler for split architecture
+app.options("*", cors()); // Reverting to use cors's own preflight handling
+
 
 app.use(express.json());
 
