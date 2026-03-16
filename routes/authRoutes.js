@@ -9,28 +9,34 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// -------- EMAIL TRANSPORTER --------
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // Use STARTTLS
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
+// -------- EMAIL PROVIDER (RESEND API) --------
+// Using fetch to bypass Render SMTP blocks
+async function sendEmailViaResend({ to, subject, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not defined in environment variables.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
     },
-    // Force IPv4 because IPv6 failed in logs
-    family: 4,
-    connectionTimeout: 20000, 
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    debug: true,
-    logger: true
+    body: JSON.stringify({
+      from: "FocusBoard <onboarding@resend.dev>", // Default for free tier
+      to,
+      subject,
+      html
+    })
   });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to send email via Resend.");
+  }
+  return data;
 }
-
-
-
 
 
 
@@ -126,15 +132,11 @@ router.post("/forgot-password", async (req, res) => {
 
     console.log(`[Forgot Password] Reset link built for: ${email}`);
 
-    console.log(`[Forgot Password] Handing over to background email process for: ${email}`);
-    const transporter = getTransporter();
-    
-    console.log(`[Forgot Password] Starting sendMail background process...`);
-    // BACKGROUND SEND
-    transporter.sendMail({
+    console.log(`[Forgot Password] Handing over to Resend API process for: ${email}`);
 
-      from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
-      to: email,
+    // Call Resend API in the background
+    sendEmailViaResend({
+      to: email, // Resend free tier allows sending to your own verified email
       subject: "Reset your FocusBoard password",
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#020617;color:#e5e7eb;border-radius:12px;">
@@ -148,8 +150,8 @@ router.post("/forgot-password", async (req, res) => {
         </div>
       `
     })
-    .then(() => console.log(`[Forgot Password] SUCCESS: Email delivered to ${email}`))
-    .catch(err => console.error(`[Forgot Password] FAILURE: Real error was:`, err.message || err));
+    .then(() => console.log(`[Forgot Password] SUCCESS: Email sent via Resend to ${email}`))
+    .catch(err => console.error(`[Forgot Password] FAILURE (Resend):`, err.message || err));
 
     // Respond instantly
     res.json({ message: "If that email is registered, a reset link has been sent." });
@@ -161,7 +163,7 @@ router.post("/forgot-password", async (req, res) => {
     console.error("[Forgot Password] Critical Error:", err.message || err);
     // Returning more detail to help the user fix their Render env vars
     res.status(500).json({ 
-      error: `Email Error: ${err.message || "Unknown error"}. Please check your App Password in Render settings.` 
+      error: `Email Error: ${err.message || "Unknown error"}. Please check your email service configuration.` 
     });
   }
 });
