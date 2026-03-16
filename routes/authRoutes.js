@@ -116,6 +116,9 @@ router.post("/forgot-password", async (req, res) => {
     console.log(`[Forgot Password] Attempting to send email to: ${email}`);
     const transporter = getTransporter();
     
+    // Add logging to see exactly where it stops
+    console.log(`[Forgot Password] SMTP Config: Service: Gmail | User: ${process.env.EMAIL_USER}`);
+    
     await transporter.sendMail({
       from: `"FocusBoard" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -135,6 +138,7 @@ router.post("/forgot-password", async (req, res) => {
 
     console.log(`[Forgot Password] Email sent successfully to: ${email}`);
     res.json({ message: "If that email is registered, a reset link has been sent." });
+
 
 
   } catch (err) {
