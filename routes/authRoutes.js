@@ -105,7 +105,12 @@ router.post("/forgot-password", async (req, res) => {
     user.resetTokenExpiry = expiry;
     await user.save();
 
-    console.log(`[Forgot Password] Reset link built, preparing email for: ${email}`);
+    // Build reset link with normalized FRONTEND_URL
+    const baseFrontUrl = (process.env.FRONTEND_URL || "http://127.0.0.1:5500").replace(/\/$/, "");
+    const resetLink = `${baseFrontUrl}/auth.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
+
+    console.log(`[Forgot Password] Reset link built for: ${email}`);
+
     const transporter = getTransporter();
     
     console.log(`[Forgot Password] Attempting to sendMail...`);
