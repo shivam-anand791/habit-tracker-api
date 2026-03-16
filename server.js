@@ -19,16 +19,22 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
+    // Allow requests with no origin (like mobile apps/curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = "The CORS policy for this site does not allow access from the specified Origin.";
-      return callback(new Error(msg), false);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("CORS Rejected for origin:", origin);
+      console.log("Expected one of:", allowedOrigins);
+      callback(new Error("Not allowed by CORS"));
     }
-    return callback(null, true);
   },
   credentials: true
 }));
+
+// Add this to handle OPTIONS preflight for all routes
+app.options("*", cors());
 
 app.use(express.json());
 
