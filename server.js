@@ -20,6 +20,7 @@ const allowedOrigins = [
 
 
 
+// CORS middleware handles preflight automatically
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps/curl)
@@ -36,8 +37,6 @@ app.use(cors({
   credentials: true
 }));
 
-// Robust OPTIONS preflight handler for split architecture
-app.options("*", cors()); // Reverting to use cors's own preflight handling
 
 
 app.use(express.json());
